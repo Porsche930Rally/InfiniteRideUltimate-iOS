@@ -35,9 +35,86 @@ private final class XMLActivityParser: NSObject, XMLParserDelegate {
 private enum FITActivityParser {
     struct Field {var number:Int;var size:Int;var type:Int}
     struct Definition {var global:Int;var bigEndian:Bool;var fields:[Field]}
-    static func parse(_ data:Data,name:String)throws->RideActivity{let b=[UInt8](data);guard b.count>=14,b[8]==46,b[9]==70,b[10]==73,b[11]==84 else{throw NSError(domain:"InfiniteRideFIT",code:1,userInfo:[NSLocalizedDescriptionKey:"Invalid FIT header"])};let header=Int(b[0]);guard header>=12&&header<b.count else{throw NSError(domain:"InfiniteRideFIT",code:1,userInfo:[NSLocalizedDescriptionKey:"Invalid FIT header size"])};let dataSize=Int(u32(b,4,false)),end=min(b.count,header+dataSize);var i=header,defs:[Int:Definition]=[:],rows:[RideSample]=[],lastTimestamp:UInt32=0;let fitEpoch=Date(timeIntervalSince1970:631065600)
-        while i<end{let h=b[i];i+=1;if h & 0x80 == 0 && h & 0x40 != 0{let local=Int(h & 0x0F),developer=h & 0x20 != 0;guard i+5<=end else{break};i+=1;let big=b[i] != 0;i+=1;let global=Int(u16(b,i,big));i+=2;let n=Int(b[i]);i+=1;var fields:[Field]=[];for _ in 0..<n{guard i+3<=end else{break};fields.append(Field(number:Int(b[i]),size:Int(b[i+1]),type:Int(b[i+2])));i+=3};if developer,i<end{let count=Int(b[i]);i=min(end,i+1+count*3)};defs[local]=Definition(global:global,bigEndian:big,fields:fields)}else{let compressed=h & 0x80 != 0,local=compressed ? Int((h>>5) & 0x03):Int(h & 0x0F);guard let def=defs[local] else{break};var values:[Int:UInt64]=[:];for f in def.fields{guard i+f.size<=end else{i=end;break};values[f.number]=read(b,i,f.size,def.bigEndian);i+=f.size};if def.global==20{var timestamp=UInt32(values[253] ?? UInt64(lastTimestamp));if compressed{let offset=UInt32(h & 0x1F),base=lastTimestamp & ~0x1F;timestamp=base|offset;if timestamp<lastTimestamp{timestamp+=0x20}};lastTimestamp=timestamp;let lat=semicircle(values[0]),lon=semicircle(values[1]);let altitude=values[78].map{Double($0)/5-500} ?? values[2].map{Double($0)/5-500} ?? 0;let speed=values[73].map{Double($0)/1000} ?? values[6].map{Double($0)/1000} ?? 0;let date=fitEpoch.addingTimeInterval(Double(timestamp)),elapsed=rows.isEmpty ? 0:date.timeIntervalSince(rows[0].date);rows.append(RideSample(date:date,elapsed:max(0,elapsed),distanceMeters:Double(values[5] ?? 0)/100,speedMps:speed,heartRate:Int(values[3] ?? 0),cadence:Int(values[4] ?? 0),power:Int(values[7] ?? 0),altitudeMeters:altitude,grade:0,coordinate:lat==nil||lon==nil ? nil:Coordinate(.init(latitude:lat!,longitude:lon!)),powerMeasured:(values[7] ?? 0)>0))}}}
-        guard !rows.isEmpty else{throw NSError(domain:"InfiniteRideFIT",code:2,userInfo:[NSLocalizedDescriptionKey:"No cycling records found in FIT file"])};return ActivityImporter.build(rows,name:name)}
+    static func parse(_ data: Data, name: String) throws -> RideActivity {
+        let bytes = [UInt8](data)
+        guard bytes.count >= 14, bytes[8] == 46, bytes[9] == 70, bytes[10] == 73, bytes[11] == 84 else {
+            throw NSError(domain: "InfiniteRideFIT", code: 1, userInfo: [NSLocalizedDescriptionKey: "Invalid FIT header"])
+        }
+        let headerSize = Int(bytes[0])
+        guard headerSize >= 12, headerSize < bytes.count else {
+            throw NSError(domain: "InfiniteRideFIT", code: 1, userInfo: [NSLocalizedDescriptionKey: "Invalid FIT header size"])
+        }
+        let dataSize = Int(u32(bytes, 4, false))
+        let end = min(bytes.count, headerSize + dataSize)
+        let fitEpoch = Date(timeIntervalSince1970: 631065600)
+        var index = headerSize
+        var definitions: [Int: Definition] = [:]
+        var rows: [RideSample] = []
+        var lastTimestamp: UInt32 = 0
+
+        while index < end {
+            let header = bytes[index]
+            index += 1
+            let compressed = (header & 0x80) != 0
+            let definitionMessage = !compressed && (header & 0x40) != 0
+            if definitionMessage {
+                let local = Int(header & 0x0F)
+                let hasDeveloperFields = (header & 0x20) != 0
+                guard index + 5 <= end else { break }
+                index += 1
+                let bigEndian = bytes[index] != 0
+                index += 1
+                let global = Int(u16(bytes, index, bigEndian))
+                index += 2
+                let count = Int(bytes[index])
+                index += 1
+                var fields: [Field] = []
+                for _ in 0..<count {
+                    guard index + 3 <= end else { break }
+                    fields.append(Field(number: Int(bytes[index]), size: Int(bytes[index + 1]), type: Int(bytes[index + 2])))
+                    index += 3
+                }
+                if hasDeveloperFields, index < end {
+                    let developerCount = Int(bytes[index])
+                    index = min(end, index + 1 + developerCount * 3)
+                }
+                definitions[local] = Definition(global: global, bigEndian: bigEndian, fields: fields)
+                continue
+            }
+
+            let local = compressed ? Int((header >> 5) & 0x03) : Int(header & 0x0F)
+            guard let definition = definitions[local] else { break }
+            var values: [Int: UInt64] = [:]
+            for field in definition.fields {
+                guard index + field.size <= end else { index = end; break }
+                values[field.number] = read(bytes, index, field.size, definition.bigEndian)
+                index += field.size
+            }
+            guard definition.global == 20 else { continue }
+
+            var timestamp = UInt32(values[253] ?? UInt64(lastTimestamp))
+            if compressed {
+                let offset = UInt32(header & 0x1F)
+                timestamp = (lastTimestamp & ~UInt32(0x1F)) | offset
+                if timestamp < lastTimestamp { timestamp += 0x20 }
+            }
+            lastTimestamp = timestamp
+            let latitude = semicircle(values[0])
+            let longitude = semicircle(values[1])
+            let altitude = values[78].map { Double($0) / 5 - 500 } ?? values[2].map { Double($0) / 5 - 500 } ?? 0
+            let speed = values[73].map { Double($0) / 1000 } ?? values[6].map { Double($0) / 1000 } ?? 0
+            let date = fitEpoch.addingTimeInterval(Double(timestamp))
+            let elapsed = rows.isEmpty ? 0 : date.timeIntervalSince(rows[0].date)
+            let coordinate: Coordinate?
+            if let latitude, let longitude { coordinate = Coordinate(.init(latitude: latitude, longitude: longitude)) }
+            else { coordinate = nil }
+            rows.append(RideSample(date: date, elapsed: max(0, elapsed), distanceMeters: Double(values[5] ?? 0) / 100, speedMps: speed, heartRate: Int(values[3] ?? 0), cadence: Int(values[4] ?? 0), power: Int(values[7] ?? 0), altitudeMeters: altitude, grade: 0, coordinate: coordinate, powerMeasured: (values[7] ?? 0) > 0))
+        }
+        guard !rows.isEmpty else {
+            throw NSError(domain: "InfiniteRideFIT", code: 2, userInfo: [NSLocalizedDescriptionKey: "No cycling records found in FIT file"])
+        }
+        return ActivityImporter.build(rows, name: name)
+    }
     static func u16(_ b:[UInt8],_ i:Int,_ big:Bool)->UInt16{big ? UInt16(b[i])<<8|UInt16(b[i+1]):UInt16(b[i])|UInt16(b[i+1])<<8}
     static func u32(_ b:[UInt8],_ i:Int,_ big:Bool)->UInt32{var v:UInt32=0;if big{for x in 0..<4{v=(v<<8)|UInt32(b[i+x])}}else{for x in 0..<4{v|=UInt32(b[i+x])<<UInt32(8*x)}};return v}
     static func read(_ b:[UInt8],_ i:Int,_ size:Int,_ big:Bool)->UInt64{var v:UInt64=0;if big{for x in 0..<min(size,8){v=(v<<8)|UInt64(b[i+x])}}else{for x in 0..<min(size,8){v|=UInt64(b[i+x])<<UInt64(8*x)}};return v}
