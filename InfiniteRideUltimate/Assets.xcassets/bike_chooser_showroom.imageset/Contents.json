@@ -1,0 +1,13 @@
+{
+  "images" : [
+    {
+      "filename" : "bike_chooser_showroom.png",
+      "idiom" : "universal",
+      "scale" : "1x"
+    }
+  ],
+  "info" : {
+    "author" : "xcode",
+    "version" : 1
+  }
+}
