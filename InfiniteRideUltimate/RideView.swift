@@ -27,7 +27,7 @@ struct RouteMap: View {
                             Image(systemName: "figure.outdoor.cycle").font(.caption2.bold()).foregroundStyle(.black)
                         }
                         Text(peerLabel(peer)).font(.caption2.bold()).padding(.horizontal, 6).padding(.vertical, 3)
-                            .background(.black.opacity(.82), in: Capsule()).foregroundStyle(.white)
+                            .background(.black.opacity(0.82), in: Capsule()).foregroundStyle(.white)
                     }
                 }
             }
@@ -64,11 +64,11 @@ struct RiderRadar: View {
             ZStack {
                 RoundedRectangle(cornerRadius: 20).fill(Color(red: 0.004, green: 0.025, blue: 0.04))
                 ForEach(1...4, id: \.self) { ring in
-                    Circle().stroke(IRTheme.cyan.opacity(.32), lineWidth: 1)
+                    Circle().stroke(IRTheme.cyan.opacity(0.32), lineWidth: 1)
                         .frame(width: radius * 2 * CGFloat(ring) / 4, height: radius * 2 * CGFloat(ring) / 4)
                 }
-                Rectangle().fill(IRTheme.cyan.opacity(.25)).frame(width: radius * 2, height: 1)
-                Rectangle().fill(IRTheme.cyan.opacity(.25)).frame(width: 1, height: radius * 2)
+                Rectangle().fill(IRTheme.cyan.opacity(0.25)).frame(width: radius * 2, height: 1)
+                Rectangle().fill(IRTheme.cyan.opacity(0.25)).frame(width: 1, height: radius * 2)
                 Image(systemName: "location.north.fill").foregroundStyle(IRTheme.lime).font(.title2.bold())
                 ForEach(Array(peers.enumerated()), id: \.offset) { index, peer in
                     let point = radarPoint(peer, radius: radius)
@@ -108,7 +108,9 @@ struct RideView: View {
     @EnvironmentObject var app: AppModel
     @EnvironmentObject var bluetooth: BluetoothSensorManager
     @EnvironmentObject var proximity: ProximityRiderService
-    @State private var finishPrompt = false, showSensors = false, showTeam = false
+    @State private var finishPrompt = false
+    @State private var showSensors = false
+    @State private var showTeam = false
 
     var body: some View {
         ScrollView {
@@ -182,9 +184,9 @@ struct RideView: View {
         let hr = ("HEART RATE", app.heartRate > 0 ? "\(app.heartRate)" : "--", "bpm", IRTheme.red, "heart.fill")
         let cad = ("CADENCE", app.cadence > 0 ? "\(app.cadence)" : "--", "rpm", IRTheme.lime, "metronome.fill")
         let pow = ("POWER", app.power > 0 ? "\(app.power)" : "\(app.samples.last?.power ?? 0)", "W", IRTheme.orange, "bolt.fill")
-        let dist = ("DISTANCE", String(format: "%.2f", app.distanceDisplay), app.profile.metric ? "km" : "mi", IRTheme.cyan, "road.lanes")
+        let dist = ("DISTANCE", String(format: "%0.2f", app.distanceDisplay), app.profile.metric ? "km" : "mi", IRTheme.cyan, "road.lanes")
         let time = ("ELAPSED", app.formatTime(app.elapsed), "time", IRTheme.cyan, "clock.fill")
-        let avg = ("AVERAGE", String(format: "%.1f", app.elapsed > 0 ? app.distanceMeters / app.elapsed * (app.profile.metric ? 3.6 : 2.236936) : 0), app.profile.metric ? "km/h" : "mph", IRTheme.lime, "speedometer")
+        let avg = ("AVERAGE", String(format: "%0.1f", app.elapsed > 0 ? app.distanceMeters / app.elapsed * (app.profile.metric ? 3.6 : 2.236936) : 0), app.profile.metric ? "km/h" : "mph", IRTheme.lime, "speedometer")
         switch app.profile.activeRideLayout {
         case .road: return [hr, cad, pow, dist]
         case .timeTrial: return [pow, avg, hr, time]
@@ -197,7 +199,7 @@ struct RideView: View {
             VStack(alignment: .leading, spacing: 8) {
                 HStack { Text("RACE RIDER").font(.caption.weight(.black)).foregroundStyle(IRTheme.orange); Spacer(); Text("P\(racePosition.position) / \(racePosition.total)").font(.headline).foregroundStyle(IRTheme.lime) }
                 HStack { Text("\(Int(app.remainingMeters)) m remaining"); Spacer(); Text("ROLE • \(app.raceRole.rawValue)") }.font(.caption.weight(.bold))
-                Text(String(format: "TEAM SPREAD %.1f m • %@", racePosition.spread, app.message)).font(.headline)
+                Text(String(format: "TEAM SPREAD %0.1f m • %@", racePosition.spread, app.message)).font(.headline)
                 Button("RIDER / DIRECTOR TEAM BOARD") { showTeam = true }.buttonStyle(.bordered)
             }
         }

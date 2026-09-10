@@ -90,7 +90,7 @@ final class AppModel: ObservableObject {
         let altitude = loc?.altitude ?? 0
         let prior = samples.last
         let grade: Double
-        if let prior, increment > 2 { grade = min(.25, max(-.25, (altitude - prior.altitudeMeters) / increment)) } else { grade = 0 }
+        if let prior, increment > 2 { grade = min(0.25, max(-0.25, (altitude - prior.altitudeMeters) / increment)) } else { grade = 0 }
         samples.append(RideSample(date: now, elapsed: elapsed, distanceMeters: distanceMeters, speedMps: currentSpeedMps, heartRate: heartRate, cadence: cadence, power: power > 0 ? power : modeledPower(speed: currentSpeedMps, grade: grade), altitudeMeters: altitude, grade: grade, coordinate: loc.map { Coordinate($0.coordinate) }, powerMeasured: power > 0))
         if rideKind.isRace{proximity?.update(name:profile.name,role:raceRole,heart:heartRate,cadence:cadence,power:power,speed:currentSpeedMps,location:loc)}
         if rideKind.isRace && remainingMeters <= Double(profile.sprintAlertMeters) && remainingMeters > 0 { message = "SPRINT • \(Int(remainingMeters)) m to finish" }
@@ -99,9 +99,9 @@ final class AppModel: ObservableObject {
     private func modeledPower(speed: Double, grade: Double) -> Int {
         guard speed > 1 else { return 0 }
         let mass = profile.riderKg + profile.bikeKg, gravity = 9.80665
-        let rolling = .0045 * mass * gravity * speed
+        let rolling = 0.0045 * mass * gravity * speed
         let climbing = mass * gravity * grade * speed
-        let aero = .5 * 1.225 * .26 * pow(speed, 3)
+        let aero = 0.5 * 1.225 * 0.26 * pow(speed, 3)
         return max(0, Int((rolling + climbing + aero).rounded()))
     }
 

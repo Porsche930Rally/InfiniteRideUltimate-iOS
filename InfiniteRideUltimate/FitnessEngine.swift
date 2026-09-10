@@ -9,22 +9,22 @@ enum FitnessEngine {
         let avgPower = powered.isEmpty ? 0 : Double(powered.map(\.power).reduce(0,+)) / Double(powered.count)
         let hrr = avgHR > 0 ? (avgHR - Double(profile.restingHR)) / Double(max(1, profile.maximumHR - profile.restingHR)) : 0
         let oxygenDemand = avgPower > 0 ? 10.8 * avgPower / profile.riderKg + 7 : 0
-        var baseVO2 = oxygenDemand > 0 && hrr >= 0.55 ? oxygenDemand / min(.95, max(.68, hrr)) : 0
+        var baseVO2 = oxygenDemand > 0 && hrr >= 0.55 ? oxygenDemand / min(0.95, max(0.68, hrr)) : 0
         let effort = sustainedEffort(ride.samples, profile: profile)
         if effort.qualifying {
             if baseVO2 == 0 { baseVO2 = effort.vo2 }
-            else { baseVO2 = min(baseVO2 + 2, max(baseVO2 - 2, baseVO2 * .82 + effort.vo2 * .18)) }
+            else { baseVO2 = min(baseVO2 + 2, max(baseVO2 - 2, baseVO2 * 0.82 + effort.vo2 * 0.18)) }
         }
         if profile.manualVO2 > 0 { baseVO2 = profile.manualVO2 }
-        let ftp20 = bestAveragePower(ride.samples, seconds: 1200) * .95
-        let ftpShort = bestAveragePower(ride.samples, seconds: 300) * .78
+        let ftp20 = bestAveragePower(ride.samples, seconds: 1200) * 0.95
+        let ftpShort = bestAveragePower(ride.samples, seconds: 300) * 0.78
         let ftp = max(ftp20, max(ftpShort, avgPower * durationFTPFactor(ride.duration)))
         let sprint = bestAveragePower(ride.samples, seconds: 5)
         let summary: String
         if effort.qualifying {
-            summary = String(format: "VO₂ %.1f from sustained %.1f mph for %.2f mi with HR and terrain checks. FTP %.0f W. Five-second output %.0f W.", baseVO2, effort.speedMph, effort.miles, ftp, sprint)
+            summary = String(format: "VO₂ %0.1f from sustained %0.1f mph for %0.2f mi with HR and terrain checks. FTP %0.0f W. Five-second output %0.0f W.", baseVO2, effort.speedMph, effort.miles, ftp, sprint)
         } else {
-            summary = String(format: "VO₂ %.1f from the complete ride. No short-range segment cleared every duration, HR and terrain gate. FTP %.0f W.", baseVO2, ftp)
+            summary = String(format: "VO₂ %0.1f from the complete ride. No short-range segment cleared every duration, HR and terrain gate. FTP %0.0f W.", baseVO2, ftp)
         }
         return FitnessResult(vo2: min(95,max(0,baseVO2)), ftp: min(800,max(0,ftp)), shortRangeVO2: effort.qualifying ? effort.vo2 : 0, maxSprint: sprint, qualifying: effort.qualifying, summary: summary)
     }
@@ -48,12 +48,12 @@ enum FitnessEngine {
         let hrr = (avgHR - Double(profile.restingHR)) / Double(max(1,profile.maximumHR-profile.restingHR))
         let hrCoverage = Double(hrRows.count) / Double(best.count)
         let measuredCoverage = Double(best.filter(\.powerMeasured).count) / Double(best.count)
-        let qualifies = seconds >= 75 && meters >= 482.8 && hrCoverage >= .70 && hrr >= .65 && avgGrade >= -.015 && avgPower > 0
+        let qualifies = seconds >= 75 && meters >= 482.8 && hrCoverage >= 0.70 && hrr >= 0.65 && avgGrade >= -0.015 && avgPower > 0
         let demand = 10.8 * avgPower / profile.riderKg + 7
-        let durationFraction = seconds < 90 ? .78 : seconds < 180 ? .83 : seconds < 300 ? .87 : seconds < 600 ? .91 : .94
-        let hrFraction = min(.95,max(.68,hrr))
-        let effortFraction = measuredCoverage >= .5 ? .60*hrFraction + .40*durationFraction : .72*hrFraction + .28*durationFraction
-        return Effort(qualifying: qualifies, vo2: min(95,max(0,demand/max(.68,effortFraction))), speedMph: avgSpeed, miles: meters/1609.344)
+        let durationFraction = seconds < 90 ? 0.78 : seconds < 180 ? 0.83 : seconds < 300 ? 0.87 : seconds < 600 ? 0.91 : 0.94
+        let hrFraction = min(0.95,max(0.68,hrr))
+        let effortFraction = measuredCoverage >= 0.5 ? 0.60*hrFraction + 0.40*durationFraction : 0.72*hrFraction + 0.28*durationFraction
+        return Effort(qualifying: qualifies, vo2: min(95,max(0,demand/max(0.68,effortFraction))), speedMph: avgSpeed, miles: meters/1609.344)
     }
 
     private static func bestAveragePower(_ samples: [RideSample], seconds: TimeInterval) -> Double {
@@ -66,10 +66,10 @@ enum FitnessEngine {
                 let remove = min(5,max(0,samples[left+1].elapsed-samples[left].elapsed))
                 weighted -= Double(samples[left+1].power)*remove; time -= remove; left += 1
             }
-            if time >= seconds*.90 { best = max(best,weighted/max(.1,time)) }
+            if time >= seconds*0.90 { best = max(best,weighted/max(0.1,time)) }
         }
         return best
     }
     private static func duration(_ rows: [RideSample]) -> TimeInterval { guard let a=rows.first,let b=rows.last else{return 0};return b.elapsed-a.elapsed }
-    private static func durationFTPFactor(_ seconds: TimeInterval) -> Double { seconds<180 ? .70 : seconds<360 ? .78 : seconds<720 ? .85 : seconds<1200 ? .90 : .95 }
+    private static func durationFTPFactor(_ seconds: TimeInterval) -> Double { seconds<180 ? 0.70 : seconds<360 ? 0.78 : seconds<720 ? 0.85 : seconds<1200 ? 0.90 : 0.95 }
 }
