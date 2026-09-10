@@ -6,8 +6,8 @@ enum IRTheme {
     static let panel2 = Color(red: 0.065, green: 0.085, blue: 0.095)
     static let line = Color(red: 0.18, green: 0.25, blue: 0.28)
     static let cyan = Color(red: 0.24, green: 0.86, blue: 1.0)
-    static let lime = Color(red: 0.67, green: 1.0, blue: 0.20)
-    static let orange = Color(red: 1.0, green: 0.45, blue: 0.20)
+    static let lime = Color(red: 0.24, green: 0.86, blue: 1.0)
+    static let orange = Color(red: 1.0, green: 0.27, blue: 0.24)
     static let red = Color(red: 1.0, green: 0.30, blue: 0.29)
     static let muted = Color.white.opacity(0.65)
 }
@@ -18,7 +18,8 @@ struct GlassCard<Content: View>: View {
     var body: some View {
         content.padding(16).frame(maxWidth: .infinity, alignment: .leading)
             .background(LinearGradient(colors: [IRTheme.panel2.opacity(0.95),IRTheme.panel.opacity(0.88)], startPoint: .topLeading, endPoint: .bottomTrailing))
-            .overlay(RoundedRectangle(cornerRadius: 18).stroke(IRTheme.line.opacity(0.8),lineWidth:1))
+            .overlay(RoundedRectangle(cornerRadius: 18).stroke(LinearGradient(colors:[IRTheme.cyan.opacity(0.45),IRTheme.line.opacity(0.55),IRTheme.red.opacity(0.20)],startPoint:.topLeading,endPoint:.bottomTrailing),lineWidth:1))
+            .shadow(color: IRTheme.cyan.opacity(0.08), radius: 14, x: 0, y: 7)
             .clipShape(RoundedRectangle(cornerRadius: 18))
     }
 }

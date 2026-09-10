@@ -101,6 +101,13 @@ struct RideActivity: Codable, Identifiable {
     }
 }
 
+enum PowerCalibrationMode: String, Codable, CaseIterable, Identifiable {
+    case off = "Off"
+    case automatic = "Automatic"
+    case manual = "Manual"
+    var id: String { rawValue }
+}
+
 struct AthleteProfile: Codable {
     var name = "Mike"
     var age = 26
@@ -120,6 +127,12 @@ struct AthleteProfile: Codable {
     var raceTeamLocked = false
     var raceTeamSlots = 4
     var selectedBikeType: BikeType = .road
+    // Optional so profiles saved by 5.5 continue to decode without migration.
+    var powerCalibrationMode: PowerCalibrationMode? = .automatic
+    var powerCalibrationFactor: Double? = 1.0
+    var powerCalibrationOffsetWatts: Int? = 0
+    var powerCalibrationSamples: Int? = 0
+    var powerCalibrationUpdatedAt: Date? = nil
 }
 
 struct SavedRider: Codable, Identifiable, Hashable {

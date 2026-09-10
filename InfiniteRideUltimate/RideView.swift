@@ -183,7 +183,7 @@ struct RideView: View {
     private var layoutFields: [(String, String, String, Color, String)] {
         let hr = ("HEART RATE", app.heartRate > 0 ? "\(app.heartRate)" : "--", "bpm", IRTheme.red, "heart.fill")
         let cad = ("CADENCE", app.cadence > 0 ? "\(app.cadence)" : "--", "rpm", IRTheme.lime, "metronome.fill")
-        let pow = ("POWER", app.power > 0 ? "\(app.power)" : "\(app.samples.last?.power ?? 0)", "W", IRTheme.orange, "bolt.fill")
+        let pow = ("POWER", "\(app.displayedPower)", app.power > 0 ? "W • SENSOR" : "W • CAL", IRTheme.orange, "bolt.fill")
         let dist = ("DISTANCE", String(format: "%0.2f", app.distanceDisplay), app.profile.metric ? "km" : "mi", IRTheme.cyan, "road.lanes")
         let time = ("ELAPSED", app.formatTime(app.elapsed), "time", IRTheme.cyan, "clock.fill")
         let avg = ("AVERAGE", String(format: "%0.1f", app.elapsed > 0 ? app.distanceMeters / app.elapsed * (app.profile.metric ? 3.6 : 2.236936) : 0), app.profile.metric ? "km/h" : "mph", IRTheme.lime, "speedometer")

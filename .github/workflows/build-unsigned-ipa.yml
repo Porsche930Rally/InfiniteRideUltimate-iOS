@@ -36,14 +36,14 @@ jobs:
           test -x "$APP/InfiniteRide"
           mkdir -p Payload
           ditto "$APP" "Payload/InfiniteRide.app"
-          /usr/bin/zip -qry InfiniteRideUltimate-iOS-5.5-Scarlet.ipa Payload
-          shasum -a 256 InfiniteRideUltimate-iOS-5.5-Scarlet.ipa > InfiniteRideUltimate-iOS-5.5-Scarlet.sha256
+          /usr/bin/zip -qry InfiniteRideUltimate-iOS-5.6-Scarlet.ipa Payload
+          shasum -a 256 InfiniteRideUltimate-iOS-5.6-Scarlet.ipa > InfiniteRideUltimate-iOS-5.6-Scarlet.sha256
       - name: Upload IPA
         uses: actions/upload-artifact@v4
         with:
           name: InfiniteRideUltimate-iOS-Scarlet
           path: |
-            InfiniteRideUltimate-iOS-5.5-Scarlet.ipa
-            InfiniteRideUltimate-iOS-5.5-Scarlet.sha256
+            InfiniteRideUltimate-iOS-5.6-Scarlet.ipa
+            InfiniteRideUltimate-iOS-5.6-Scarlet.sha256
           if-no-files-found: error
           retention-days: 30

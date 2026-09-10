@@ -5,10 +5,29 @@ struct ProfileView:View{
     var body:some View{NavigationStack{Form{Section{VStack(spacing:8){Image(systemName:"person.crop.circle.fill").font(.system(size:92)).foregroundStyle(IRTheme.cyan);Text(app.profile.name).font(.title.weight(.bold));Text("More roads. A better you.").foregroundStyle(IRTheme.muted)}.frame(maxWidth:.infinity)}.listRowBackground(IRTheme.background)
         Section("Athlete"){TextField("Name",text:$app.profile.name);TextField("Backup email",text:$app.profile.email).keyboardType(.emailAddress).textInputAutocapitalization(.never);Stepper("Age  \(app.profile.age)",value:$app.profile.age,in:13...100);LabeledContent("Rider kg"){TextField("kg",value:$app.profile.riderKg,format:.number).keyboardType(.decimalPad)};LabeledContent("Resting HR"){TextField("bpm",value:$app.profile.restingHR,format:.number).keyboardType(.numberPad)};LabeledContent("Maximum HR"){TextField("bpm",value:$app.profile.maximumHR,format:.number).keyboardType(.numberPad)}}
         Section("Bike showroom"){BikeShowroomView(selection:$app.profile.selectedBikeType).frame(height:220);LabeledContent("Bike kg"){TextField("kg",value:$app.profile.bikeKg,format:.number).keyboardType(.decimalPad)};LabeledContent("Wheel circumference"){TextField("mm",value:$app.profile.wheelCircumferenceMM,format:.number).keyboardType(.numberPad)}}
+        Section("Simulated power calibration") {
+            Picker("Calibration", selection: calibrationMode) { ForEach(PowerCalibrationMode.allCases) { Text($0.rawValue).tag($0) } }
+            if calibrationMode.wrappedValue == .automatic {
+                LabeledContent("Learned correction") { Text(String(format: "%+.0f%%", (calibrationFactor.wrappedValue - 1) * 100)).foregroundStyle(IRTheme.cyan) }
+                LabeledContent("Matched samples") { Text("\(app.profile.powerCalibrationSamples ?? 0)") }
+                Text("Connect a real cycling power meter and ride steadily. InfiniteRide compares meter watts with the physics model and learns this profile automatically.").font(.caption).foregroundStyle(IRTheme.muted)
+            } else if calibrationMode.wrappedValue == .manual {
+                Stepper("Power scale  \(Int((calibrationFactor.wrappedValue * 100).rounded()))%", value: calibrationFactor, in: 0.5...2.0, step: 0.01)
+                Stepper("Power offset  \(calibrationOffset.wrappedValue >= 0 ? "+" : "")\(calibrationOffset.wrappedValue) W", value: calibrationOffset, in: -150...150, step: 5)
+                Text("Manual calibration is applied only to simulated watts. A connected meter always remains the live source.").font(.caption).foregroundStyle(IRTheme.muted)
+            } else {
+                Text("The uncorrected physics model will be used whenever no real power meter is connected.").font(.caption).foregroundStyle(IRTheme.muted)
+            }
+            Button("RESET POWER CALIBRATION", role: .destructive) { app.resetPowerCalibration() }
+        }
         Section("Race"){Picker("Your role",selection:$app.raceRole){ForEach(TeamRole.allCases){Text($0.rawValue).tag($0)}};Stepper("Sprint alert  \(app.profile.sprintAlertMeters) m",value:$app.profile.sprintAlertMeters,in:50...3000,step:50);Stepper("Director team slots  \(app.profile.raceTeamSlots)",value:$app.profile.raceTeamSlots,in:1...12)}
         Section("Display"){Toggle("Metric units",isOn:$app.profile.metric);Toggle("Rounded interface",isOn:$app.profile.roundedUI);Picker("Default ride view",selection:$app.profile.rideDisplayMode){ForEach(RideDisplayMode.allCases){Text($0.title).tag($0)}};Picker("Data layout",selection:$app.profile.activeRideLayout){ForEach(RideLayout.allCases){Text($0.title).tag($0)}};Toggle("Topographic map north-up",isOn:$app.profile.topoNorthUp)}
         Section{Button("SAVE PROFILE"){app.saveProfile()}.frame(maxWidth:.infinity)}
-        Section{Text("InfiniteRide Ultimate iOS 5.5\nINfiniteBoost45").font(.caption).foregroundStyle(IRTheme.muted)}}.scrollContentBackground(.hidden).background(IRTheme.background).navigationTitle("Profile")}}
+        Section{Text("InfiniteRide Ultimate iOS 5.6\nINfiniteBoost45").font(.caption).foregroundStyle(IRTheme.muted)}}.scrollContentBackground(.hidden).background(IRTheme.background).navigationTitle("Profile")}}
+
+    private var calibrationMode: Binding<PowerCalibrationMode> { Binding(get: { app.profile.powerCalibrationMode ?? .automatic }, set: { app.profile.powerCalibrationMode = $0 }) }
+    private var calibrationFactor: Binding<Double> { Binding(get: { app.profile.powerCalibrationFactor ?? 1.0 }, set: { app.profile.powerCalibrationFactor = min(2.0, max(0.5, $0)) }) }
+    private var calibrationOffset: Binding<Int> { Binding(get: { app.profile.powerCalibrationOffsetWatts ?? 0 }, set: { app.profile.powerCalibrationOffsetWatts = min(150, max(-150, $0)) }) }
 }
 
 struct BikeShowroomView: View {
