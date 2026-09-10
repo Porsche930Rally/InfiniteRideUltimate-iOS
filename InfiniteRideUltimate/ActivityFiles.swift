@@ -101,14 +101,35 @@ private enum FITActivityParser {
             lastTimestamp = timestamp
             let latitude = semicircle(values[0])
             let longitude = semicircle(values[1])
-            let altitude = values[78].map { Double($0) / 5 - 500 } ?? values[2].map { Double($0) / 5 - 500 } ?? 0
-            let speed = values[73].map { Double($0) / 1000 } ?? values[6].map { Double($0) / 1000 } ?? 0
+            let enhancedAltitude = values[78].map { Double($0) / 5.0 - 500.0 }
+            let standardAltitude = values[2].map { Double($0) / 5.0 - 500.0 }
+            let altitude = enhancedAltitude ?? standardAltitude ?? 0.0
+            let enhancedSpeed = values[73].map { Double($0) / 1000.0 }
+            let standardSpeed = values[6].map { Double($0) / 1000.0 }
+            let speed = enhancedSpeed ?? standardSpeed ?? 0.0
             let date = fitEpoch.addingTimeInterval(Double(timestamp))
             let elapsed = rows.isEmpty ? 0 : date.timeIntervalSince(rows[0].date)
             let coordinate: Coordinate?
             if let latitude, let longitude { coordinate = Coordinate(.init(latitude: latitude, longitude: longitude)) }
             else { coordinate = nil }
-            rows.append(RideSample(date: date, elapsed: max(0, elapsed), distanceMeters: Double(values[5] ?? 0) / 100, speedMps: speed, heartRate: Int(values[3] ?? 0), cadence: Int(values[4] ?? 0), power: Int(values[7] ?? 0), altitudeMeters: altitude, grade: 0, coordinate: coordinate, powerMeasured: (values[7] ?? 0) > 0))
+            let distance = Double(values[5] ?? 0) / 100.0
+            let heartRate = Int(values[3] ?? 0)
+            let cadence = Int(values[4] ?? 0)
+            let power = Int(values[7] ?? 0)
+            let sample = RideSample(
+                date: date,
+                elapsed: max(0.0, elapsed),
+                distanceMeters: distance,
+                speedMps: speed,
+                heartRate: heartRate,
+                cadence: cadence,
+                power: power,
+                altitudeMeters: altitude,
+                grade: 0.0,
+                coordinate: coordinate,
+                powerMeasured: power > 0
+            )
+            rows.append(sample)
         }
         guard !rows.isEmpty else {
             throw NSError(domain: "InfiniteRideFIT", code: 2, userInfo: [NSLocalizedDescriptionKey: "No cycling records found in FIT file"])
